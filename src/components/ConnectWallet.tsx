@@ -54,10 +54,7 @@ export function ConnectWallet() {
 
 	return (
 		<ConnectWalletDialog>
-			<Button
-				aria-label="Open wallet list modal"
-				title="Open wallet list modal"
-			>
+			<Button>
 				<Wallet />
 
 				<span className="leading-relaxed">Connect Wallet</span>

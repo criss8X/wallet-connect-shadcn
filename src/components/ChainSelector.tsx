@@ -1,12 +1,17 @@
+import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
-import { ChevronDown, Droplet } from "lucide-react";
-import type React from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { ChevronDown, Droplet, X } from "lucide-react";
+import { useMemo } from "react";
 import { toast } from "sonner";
-import type { Chain } from "viem";
-import { useChainId, useChains, useSwitchChain } from "wagmi";
-import { cn } from "@/lib/utils";
-import { AlertDialogTrigger } from "./AlertDialog";
+import { useChainId, useSwitchChain } from "wagmi";
+import {
+	AlertDialog,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "./AlertDialog";
 import { Button } from "./Button";
 
 const chainSelectorDotVariants = cva("size-2 rounded-full ring-2", {
@@ -31,148 +36,93 @@ type ChainDotVariants = NonNullable<
 	VariantProps<typeof chainSelectorDotVariants>["variant"]
 >;
 
-export type ChainSelectorTriggerProps = {
-	children?: (selectedChain?: Chain) => React.ReactNode;
-	dotVariant?: ChainDotVariants;
-} & Omit<React.ComponentProps<"button">, "children">;
-
-export function ChainSelectorTrigger({
-	children,
-	className,
-	"aria-label": ariaLabel = "Select Network",
-	dotVariant,
-	...props
-}: ChainSelectorTriggerProps) {
-	const chains = useChains();
+export function ChainSelector() {
+	const { switchChain, chains } = useSwitchChain();
 	const chainId = useChainId();
 
-	const selectedChain = useMemo(
-		() => chains.find((chain) => chain.id === chainId),
+	const currentChain = useMemo(
+		() => chains.find(({ id }) => id === chainId),
 		[chainId, chains],
 	);
 
 	return (
-		<AlertDialogTrigger asChild>
-			{children !== undefined ? (
-				children(selectedChain)
-			) : (
-				<Button
-					variant="outline"
-					className={cn("px-2", className)}
-					aria-label={ariaLabel}
-					{...props}
-				>
+		<AlertDialog>
+			<AlertDialogTrigger asChild>
+				<Button variant="outline" className="px-2">
 					<div className="flex gap-2 items-center size-full">
 						<div
 							className={chainSelectorDotVariants({
-								variant: dotVariant ?? getChainDotVariant(chainId),
+								variant: getChainDotVariant(chainId),
 							})}
 						/>
 
 						<span className="leading-relaxed">
-							{selectedChain?.name ?? "Unknown"}
+							{currentChain?.name ?? "Unknown"}
 						</span>
 					</div>
 
 					<ChevronDown />
 				</Button>
-			)}
-		</AlertDialogTrigger>
-	);
-}
+			</AlertDialogTrigger>
 
-export type ChainListChildrenProps = {
-	chains: readonly Chain[];
-	switchChain: (props: { chainId: number }) => void;
-};
+			<AlertDialogContent className="sm:max-w-xs gap-6">
+				<AlertDialogHeader className="flex relative gap-0">
+					<AlertDialogTitle>Switch Chain</AlertDialogTitle>
 
-export type ChainListViewProps = {
-	className?: string;
-	children?: (props: ChainListChildrenProps) => React.ReactNode;
-};
+					<AlertDialogDescription>
+						Switch to preferred chain
+					</AlertDialogDescription>
 
-export function ChainListView({ className, children }: ChainListViewProps) {
-	const chainId = useChainId();
-	const { chains, switchChain } = useSwitchChain();
-	const listRef = useRef<HTMLDivElement>(null);
+					<AlertDialogPrimitive.AlertDialogCancel asChild>
+						<Button
+							size="icon"
+							variant="ghost"
+							className="absolute right-0 bottom-1/2 translate-y-1/2"
+						>
+							<X />
+						</Button>
+					</AlertDialogPrimitive.AlertDialogCancel>
+				</AlertDialogHeader>
 
-	useEffect(() => {
-		listRef.current?.querySelector("button")?.focus();
-	}, []);
+				<div className="flex flex-col gap-2 mt-1">
+					{chains.length === 0 ? (
+						<div className="flex flex-col gap-2 items-center justify-center">
+							<Droplet className="size-14" />
 
-	const handleKeyDown = useCallback(
-		(e: React.KeyboardEvent, index: number) => {
-			if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-				e.preventDefault();
+							<div className="text-center">No chains available</div>
+						</div>
+					) : (
+						chains.map(({ id, name }) => (
+							<Button
+								key={id}
+								aria-label={`Switch to ${name}`}
+								aria-selected={id === chainId}
+								variant={id === chainId ? "default" : "outline"}
+								className="justify-between focus-visible:ring-0 focus-visible:dark:ring-0 aria-[selected=false]:focus-visible:bg-accent aria-[selected=true]:focus-visible:bg-primary/90"
+								onClick={() => {
+									switchChain(
+										{ chainId: id },
+										{
+											onError: (error) => {
+												console.error("Failed to switch chain", error);
 
-				const focusedIndexOverflow =
-					e.key === "ArrowDown"
-						? index + 1
-						: e.key === "ArrowUp"
-							? index - 1
-							: index;
+												toast.error("Failed to switch chain", {
+													dismissible: true,
+												});
+											},
+										},
+									);
+								}}
+							>
+								<span>{name}</span>
 
-				const safeFocusedIndex = focusedIndexOverflow % chains.length;
-
-				listRef.current
-					?.querySelectorAll("button")
-					?.item(safeFocusedIndex)
-					?.focus();
-			} else if (e.key === " " || e.key === "Enter") {
-				e.preventDefault();
-				e.stopPropagation();
-
-				if (e.currentTarget instanceof HTMLButtonElement) {
-					e.currentTarget.focus();
-				}
-
-				switchChain({ chainId: chains[index].id });
-			}
-		},
-		[chains, switchChain],
-	);
-
-	return (
-		<div ref={listRef} className={cn("flex flex-col gap-2 mt-1", className)}>
-			{children !== undefined ? (
-				children({ chains, switchChain })
-			) : chains.length === 0 ? (
-				<div className="flex flex-col gap-2 items-center justify-center">
-					<Droplet className="size-14" />
-
-					<div className="text-center">No chains available</div>
+								{id === chainId && <span className="text-xs">Connected</span>}
+							</Button>
+						))
+					)}
 				</div>
-			) : (
-				chains.map(({ id, name }, index) => (
-					<Button
-						key={id}
-						aria-label={`Switch to ${name}`}
-						aria-selected={id === chainId}
-						variant={id === chainId ? "default" : "ghost"}
-						className={cn(
-							"justify-between focus-visible:ring-0 focus-visible:dark:ring-0 aria-[selected=false]:focus-visible:bg-accent aria-[selected=true]:focus-visible:bg-primary/90",
-							className,
-						)}
-						onKeyDown={(e) => handleKeyDown(e, index)}
-						onClick={() => {
-							try {
-								switchChain({ chainId: id });
-							} catch (err) {
-								console.error("Failed to switch chain", err);
-
-								toast.error("Failed to switch chain", {
-									dismissible: true,
-								});
-							}
-						}}
-					>
-						<span>{name}</span>
-
-						{id === chainId && <span className="text-xs">Connected</span>}
-					</Button>
-				))
-			)}
-		</div>
+			</AlertDialogContent>
+		</AlertDialog>
 	);
 }
 
