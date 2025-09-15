@@ -1,5 +1,4 @@
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
-import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronDown, Droplet, X } from "lucide-react";
 import { useMemo } from "react";
 import { toast } from "sonner";
@@ -13,28 +12,6 @@ import {
 	AlertDialogTrigger,
 } from "./AlertDialog";
 import { Button } from "./Button";
-
-const chainSelectorDotVariants = cva("size-2 rounded-full ring-2", {
-	variants: {
-		variant: {
-			orange: "bg-orange-500 ring-orange-500/30",
-			yellow: "bg-yellow-500 ring-yellow-500/30",
-			lime: "bg-lime-500 ring-lime-500/30",
-			green: "bg-green-500 ring-green-500/30",
-			teal: "bg-teal-500 ring-teal-500/30",
-			blue: "bg-blue-500 ring-blue-500/30",
-			indigo: "bg-indigo-500 ring-indigo-500/30",
-			violet: "bg-violet-500 ring-violet-500/30",
-		},
-	},
-	defaultVariants: {
-		variant: "violet",
-	},
-});
-
-type ChainDotVariants = NonNullable<
-	VariantProps<typeof chainSelectorDotVariants>["variant"]
->;
 
 export function ChainSelector() {
 	const { switchChain, chains } = useSwitchChain();
@@ -50,12 +27,6 @@ export function ChainSelector() {
 			<AlertDialogTrigger asChild>
 				<Button variant="outline" className="px-2">
 					<div className="flex gap-2 items-center size-full">
-						<div
-							className={chainSelectorDotVariants({
-								variant: getChainDotVariant(chainId),
-							})}
-						/>
-
 						<span className="leading-relaxed">
 							{currentChain?.name ?? "Unknown"}
 						</span>
@@ -124,21 +95,4 @@ export function ChainSelector() {
 			</AlertDialogContent>
 		</AlertDialog>
 	);
-}
-
-export function getChainDotVariant(chainId: number): ChainDotVariants {
-	const variants: ChainDotVariants[] = [
-		"orange",
-		"yellow",
-		"lime",
-		"green",
-		"teal",
-		"blue",
-		"indigo",
-		"violet",
-	];
-
-	const colorIndex = Math.abs(chainId) % variants.length;
-
-	return variants[colorIndex];
 }
