@@ -1,0 +1,1 @@
+{"v":5,"entries":{"connectwallet--default":{"type":"story","id":"connectwallet--default","name":"Default","title":"ConnectWallet","importPath":"./src/stories/ConnectWallet.stories.tsx","componentPath":"./src/components/ConnectWallet.tsx","tags":["dev","test"]}}}
